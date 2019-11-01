@@ -7,6 +7,8 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/uaccess.h>
+#include <linux/random.h>
 #include <linux/fs.h>
 
 #define DEVICE "rand"
@@ -72,16 +74,21 @@ module_exit(chrdev_exit);
 
 // config file_operations
 static int dev_open(struct inode *inodep, struct file *filep) {
-  printk(KERN_INFO "%s\n", __FUNCTION__);
-  return 0;
+    get_random_bytes(&rand_number, sizeof(int));
+    printk(KERN_INFO "rand-chrdev: open rand = %d\n", rand_number);
+    return 0;
 }
 
 static ssize_t dev_read(struct file *filep, char __user *buffer, size_t length, loff_t *offset) {
-  printk(KERN_INFO "%s\n", __FUNCTION__);
-  return 0;
+    if (_copy_to_user(buffer, &rand_number, sizeof(int))) {
+        printk(KERN_ALERT "rand-chrdev: failed to sent number\n");
+        return -EFAULT;
+    }
+    printk(KERN_INFO "rand-chrdev: send number to user\n");
+    return 0;
 }
 
 static int dev_release(struct inode *inodep, struct file *filep) {
-  printk(KERN_INFO "%s\n", __FUNCTION__);
-  return 0;
+    printk(KERN_INFO "rand-chrdev: close\n");
+    return 0;
 }
