@@ -6,12 +6,17 @@
 #include <linux/sched.h>
 #include <asm/uaccess.h>
 #include <asm/current.h>
+#include <linux/errno.h>
+#include <linux/fdtable.h>
 
 MODULE_LICENSE("GPL");
 
 unsigned long sys_call_table = (unsigned long) 0xc08142b0;
 
-char *path = NULL;
+char *tmp;
+char *pathname;
+struct path *path;
+struct file *file;
 
 asmlinkage unsigned long (original_open) (const char __user, int, int);
 asmlinkage unsigned long (original_write) (unsigned int, const char __user, size_t);
@@ -22,8 +27,30 @@ asmlinkage unsigned long our_sys_open(const char* __user file_name, int flags, i
 } 
 
 asmlinkage unsigned long our_sys_write(unsigned int fd, const char __user *buffer, size_t count) {
-	if (strcmp("rs:main Q:Reg", current->comm) && strcmp("gnome-terminal", current->comm)) {
-		printk("%s write size = %d \n",current->comm, count);  
+	char system[] = "rs:main Q:Reg";
+	if (strcmp(current->comm, system)) {
+		spin_lock(&current->files->file_lock);
+		file = fcheck_files(current->files, fd);
+		if (!file) {
+			spin_unlock(&current->files->file_lock);
+			return -1;
+		}
+		path = &file->f_path;
+		path_get(path);
+		spin_unlock(&current->files->file_lock);
+		tmp = (char *)__get_free_page(GFP_KERNEL);
+		if (!tmp) {
+			path_put(path);
+			return -1;
+		}
+		pathname = d_path(path, tmp, PAGE_SIZE);
+		path_put(path);
+		if (IS_ERR(pathname)) {
+			free_page((unsigned long)tmp);
+			return PTR_ERR(pathname);
+		}
+		free_page((unsigned long)tmp);
+		printk(KERN_INFO " %s write to %s: %zu bytes\n", current->comm, pathname, count);
 	}
 	return original_write(fd, buffer, count); 
 }
