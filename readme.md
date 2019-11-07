@@ -1,14 +1,14 @@
 # Linux Kernel Module
-
-## Build and make file
+## Rand-chrdev
+### Build and make file
 
 ![g++ cmd](images/rand-chrdev/rand-chrdev-00.png)
 
-## Nạp module
+### Nạp module
 
 ![g++ cmd](images/rand-chrdev/rand-chrdev-01.png)
 
-## Character device
+### Character device
 
 ![g++ cmd](images/rand-chrdev/rand-chrdev-02.png)
 ![g++ cmd](images/rand-chrdev/rand-chrdev-03.png)
